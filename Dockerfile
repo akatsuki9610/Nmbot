@@ -21,3 +21,6 @@ EXPOSE 8080
 # Botの起動コマンド
 # Nmbot.pyを実行するコマンドを指定します
 CMD ["python", "Nmbot.py"]
+
+# ヘルスチェックを追加
+HEALTHCHECK CMD curl --fail http://localhost:8080 || exit 1
