@@ -6,13 +6,13 @@ FROM python:3.11
 WORKDIR /app
 
 # プログラムの実行に必要なライブラリを記述したファイルをコピー
-COPY requirements.txt .
+COPY app/requirements.txt .
 
 # 依存関係にあるライブラリをインストール
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Botのプログラムをコンテナにコピー
-COPY Nmbot.py .
+# app/Nmbot.pyをコンテナ内にコピー
+COPY app/Nmbot.py .
 
 # ポートを開ける（Koyeb用）
 # あなたのBotのコードにWebサーバー機能が追加されているため、ポート8080を開放します
