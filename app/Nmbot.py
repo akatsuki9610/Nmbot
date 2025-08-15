@@ -123,7 +123,8 @@ async def on_ready():
     change_waiting_roles.start()
     enforce_lockdown.start()
 
-# Botの実行
+# Botの実行！
 
 bot.run(TOKEN)
+
 
