@@ -40,7 +40,8 @@ def home():
 # Webサーバーをバックグラウンドで起動する関数
 def run_server():
     # ホスティングサービスが指定するポートを使用
-    app.run(host='0.0.0.0', port=8080)
+port = int(os.environ.get("PORT", 8080))
+app.run(host='0.0.0.0', port=port)
 
 # --- 1. メンバー参加時にロールを自動付与 ---
 @bot.event
@@ -125,3 +126,4 @@ async def on_ready():
 # Botの実行
 
 bot.run(TOKEN)
+
