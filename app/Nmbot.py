@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import os
 import discord
 from discord.ext import commands, tasks
@@ -5,16 +7,16 @@ import datetime
 import pytz
 from flask import Flask
 from threading import Thread
+import asyncio
 
 # --- 設定値 ---
-# Botのトークンを直接書く代わりに、環境変数から読み込むように変更
-TOKEN = os.environ.get('DISCORD_BOT_TOKEN') 
+TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     print("エラー: 環境変数 'DISCORD_BOT_TOKEN' が設定されていません。")
     exit()
-    
+
 # サーバーID
-GUILD_ID = 1405243040259375134  # 例: 123456789012345678
+GUILD_ID = 1405243040259375134
 
 # 利用可能ロールと認証待ちロールのID
 AVAILABLE_ROLE_ID = 1405603760092483726
@@ -32,12 +34,10 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # --- Flaskアプリケーションの作成 ---
 app = Flask(__name__)
 
-# Webサーバーのルート設定
 @app.route('/')
 def home():
     return "Hello! The bot is alive."
 
-# Webサーバーをバックグラウンドで起動する関数
 def run_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
@@ -73,8 +73,10 @@ async def on_member_join(member):
 # --- 2. 指定時間に認証待ちロールを変更 ---
 @tasks.loop(time=datetime.time(hour=START_HOUR, tzinfo=pytz.timezone('Asia/Tokyo')))
 async def change_waiting_roles():
+    print(f"[{datetime.datetime.now()}] change_waiting_roles タスクを実行します。")
     guild = bot.get_guild(GUILD_ID)
     if not guild:
+        print("ギルドが見つかりません。")
         return
 
     waiting_role = guild.get_role(WAITING_ROLE_ID)
@@ -89,8 +91,10 @@ async def change_waiting_roles():
 # --- 3. 指定時間に全員をタイムアウト・VC切断 ---
 @tasks.loop(time=datetime.time(hour=END_HOUR, tzinfo=pytz.timezone('Asia/Tokyo')))
 async def enforce_lockdown():
+    print(f"[{datetime.datetime.now()}] enforce_lockdown タスクを実行します。")
     guild = bot.get_guild(GUILD_ID)
     if not guild:
+        print("ギルドが見つかりません。")
         return
 
     owner = guild.owner
@@ -111,20 +115,34 @@ async def enforce_lockdown():
         except discord.Forbidden:
             print(f'{member.name}への処理に失敗しました（Botの権限不足）')
 
+# --- コマンドを追加 ---
+@bot.command()
+async def check_time(ctx):
+    """サーバーの現在の時刻を表示するコマンド"""
+    utc_now = datetime.datetime.now(pytz.utc)
+    jst = pytz.timezone('Asia/Tokyo')
+    jst_now = utc_now.astimezone(jst)
+    await ctx.send(f'サーバー時間 (UTC): {utc_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}\n日本時間 (JST): {jst_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
+    print(f'サーバー時間 (UTC): {utc_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
+    print(f'日本時間 (JST): {jst_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
+
+@bot.command()
+async def run_roles_change(ctx):
+    """手動でロール付け替えタスクを実行するコマンド"""
+    await ctx.send("認証待ちロールの変更タスクを手動で実行します。")
+    await change_waiting_roles()
+    await ctx.send("完了しました。")
+
 # --- Botがログインした時の処理 ---
 @bot.event
 async def on_ready():
     print(f'ログインしました: {bot.user}')
-    # Webサーバーを別スレッドで起動
+    print("Bot is ready to accept commands.")
     server_thread = Thread(target=run_server)
     server_thread.start()
-    # 定期実行タスクを開始
     change_waiting_roles.start()
     enforce_lockdown.start()
+    print("定期実行タスクを開始しました。")
 
-# Botの実行！
-
+# Botの実行
 bot.run(TOKEN)
-
-
-
