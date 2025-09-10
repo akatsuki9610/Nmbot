@@ -29,6 +29,7 @@ END_HOUR = 5
 # --- Botの初期化 ---
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True # この行を追加
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # --- Flaskアプリケーションの作成 ---
