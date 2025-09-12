@@ -29,7 +29,7 @@ END_HOUR = 5
 # --- Botの初期化 ---
 intents = discord.Intents.default()
 intents.members = True
-intents.message_content = True # この行を追加
+intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # --- Flaskアプリケーションの作成 ---
@@ -71,8 +71,7 @@ async def on_member_join(member):
         await member.add_roles(role)
         print(f'{member.name}に認証待ちロールを付与しました')
 
-# --- 2. 指定時間に認証待ちロールを変更 ---
-@tasks.loop(time=datetime.time(hour=START_HOUR, tzinfo=pytz.timezone('Asia/Tokyo')))
+# --- 2. 認証待ちロールを付与するタスク ---
 async def change_waiting_roles():
     print(f"[{datetime.datetime.now()}] change_waiting_roles タスクを実行します。")
     guild = bot.get_guild(GUILD_ID)
@@ -89,10 +88,9 @@ async def change_waiting_roles():
             await member.add_roles(available_role)
             print(f'{member.name}の認証待ちロールを利用可能ロールに変更しました')
 
-# --- 3. 指定時間に全員をタイムアウト・VC切断 ---
-@tasks.loop(time=datetime.time(hour=END_HOUR, tzinfo=pytz.timezone('Asia/Tokyo')))
+# --- 3. 全員をタイムアウト・VC切断するタスク ---
 async def enforce_lockdown():
-    print(f"[{datetime.datetime.now()}] enforce_lockdown タスクを実行します。")
+    print(f"[{datetime.datetime.now()}] enforce_lockdown タスクが実行されました。")
     guild = bot.get_guild(GUILD_ID)
     if not guild:
         print("ギルドが見つかりません。")
@@ -115,6 +113,23 @@ async def enforce_lockdown():
             print(f'{member.name}を1時間タイムアウトしました')
         except discord.Forbidden:
             print(f'{member.name}への処理に失敗しました（Botの権限不足）')
+
+# --- 毎分、現在時刻をチェックするループ ---
+@tasks.loop(minutes=1)
+async def check_time_and_run_tasks():
+    jst = pytz.timezone('Asia/Tokyo')
+    now = datetime.datetime.now(jst)
+    current_hour = now.hour
+
+    # 0時の処理
+    if current_hour == START_HOUR and now.minute == 0:
+        await change_waiting_roles()
+
+    # 5時の処理
+    if current_hour == END_HOUR and now.minute == 0:
+        await enforce_lockdown()
+
+    print(f"[{now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}] タイムチェック実行。")
 
 # --- コマンドを追加 ---
 @bot.command()
@@ -141,11 +156,7 @@ async def on_ready():
     print("Bot is ready to accept commands.")
     server_thread = Thread(target=run_server)
     server_thread.start()
-    change_waiting_roles.start()
-    enforce_lockdown.start()
-    # デバッグ用: on_readyでタスクを即座に実行
-    # await change_waiting_roles()
-    # await enforce_lockdown()
+    check_time_and_run_tasks.start()
     print("定期実行タスクを開始しました。")
 
 # Botの実行
