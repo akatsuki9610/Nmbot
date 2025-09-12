@@ -8,6 +8,7 @@ import pytz
 from flask import Flask
 from threading import Thread
 import asyncio
+import sys # sysモジュールをインポート
 
 # --- 設定値 ---
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN')
@@ -87,6 +88,7 @@ async def change_waiting_roles():
             await member.remove_roles(waiting_role)
             await member.add_roles(available_role)
             print(f'{member.name}の認証待ちロールを利用可能ロールに変更しました')
+    sys.stdout.flush() # 出力を即座にフラッシュ
 
 # --- 3. 全員をタイムアウト・VC切断するタスク ---
 async def enforce_lockdown():
@@ -113,6 +115,7 @@ async def enforce_lockdown():
             print(f'{member.name}を1時間タイムアウトしました')
         except discord.Forbidden:
             print(f'{member.name}への処理に失敗しました（Botの権限不足）')
+    sys.stdout.flush() # 出力を即座にフラッシュ
 
 # --- 毎分、現在時刻をチェックするループ ---
 @tasks.loop(minutes=1)
@@ -130,6 +133,7 @@ async def check_time_and_run_tasks():
         await enforce_lockdown()
 
     print(f"[{now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}] タイムチェック実行。")
+    sys.stdout.flush() # 出力を即座にフラッシュ
 
 # --- コマンドを追加 ---
 @bot.command()
@@ -141,6 +145,7 @@ async def check_time(ctx):
     await ctx.send(f'サーバー時間 (UTC): {utc_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}\n日本時間 (JST): {jst_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
     print(f'サーバー時間 (UTC): {utc_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
     print(f'日本時間 (JST): {jst_now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}')
+    sys.stdout.flush()
 
 @bot.command()
 async def run_roles_change(ctx):
@@ -154,10 +159,14 @@ async def run_roles_change(ctx):
 async def on_ready():
     print(f'ログインしました: {bot.user}')
     print("Bot is ready to accept commands.")
+    sys.stdout.flush() # ログイン完了ログをフラッシュ
     server_thread = Thread(target=run_server)
     server_thread.start()
+    print("Flaskサーバーを起動しました。")
+    sys.stdout.flush() # Flask起動ログをフラッシュ
     check_time_and_run_tasks.start()
     print("定期実行タスクを開始しました。")
+    sys.stdout.flush() # タスク開始ログをフラッシュ
 
 # Botの実行
 bot.run(TOKEN)
