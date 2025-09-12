@@ -143,6 +143,9 @@ async def on_ready():
     server_thread.start()
     change_waiting_roles.start()
     enforce_lockdown.start()
+    # デバッグ用: on_readyでタスクを即座に実行
+    # await change_waiting_roles()
+    # await enforce_lockdown()
     print("定期実行タスクを開始しました。")
 
 # Botの実行
